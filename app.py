@@ -110,36 +110,60 @@ if func_input:
         # --- PESTAÑAS PRINCIPALES ---
         tab1, tab2, tab3, tab4 = st.tabs(["📏 Límites", "📉 Derivadas", "∫ Integrales", "📊 Gráfico Pro"])
         
-        # === TAB 1: LÍMITES (MEJORADO: FRACCIONES + DECIMALES) ===
+        # === TAB 1: LÍMITES (LÓGICA CORREGIDA 0/0) ===
         with tab1:
             col1, col2 = st.columns([1, 2])
             val_lim = col1.text_input("x tiende a:", "0")
             
             if col1.button("Calcular Límite"):
                 try:
-                    # TRUCO: Usamos sp.sympify en vez de float para mantenerlo exacto (fracción)
+                    # 1. Preparar el valor objetivo
                     if val_lim == 'oo':
                         target = sp.oo
                     else:
-                        target = sp.sympify(val_lim) # Esto convierte "4" en numero exacto, no decimal
+                        target = sp.sympify(val_lim)
                     
-                    res = sp.limit(expr, x, target)
+                    # 2. Calcular el Límite Real (El resultado final correcto)
+                    res_final = sp.limit(expr, x, target)
                     
+                    # 3. Calcular la Sustitución Directa (Para ver si da error)
+                    try:
+                        sustitucion = expr.subs(x, target)
+                    except:
+                        sustitucion = sp.nan
+
+                    # --- MOSTRAR RESULTADO ---
                     col2.markdown(f"### Resultado:")
-                    # Mostramos: Limite = Fracción = Decimal
-                    col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res)} \quad \approx \quad {res.evalf():.4f}")
+                    col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res_final)} \quad \approx \quad {res_final.evalf():.4f}")
                     
-                    # Explicación paso a paso
-                    with st.expander("📝 Ver Explicación del Procedimiento"):
-                        st.markdown(f"1. **Evaluar:** Sustituimos $x$ por ${val_lim}$ en la función.")
+                    # --- EXPLICACIÓN INTELIGENTE ---
+                    with st.expander("📝 Ver Análisis del Procedimiento", expanded=True):
+                        st.markdown(f"**Paso 1: Intentar sustitución directa**")
+                        st.write(f"Evaluamos $f({val_lim})$:")
+                        
+                        # Mostramos la fórmula sustituida visualmente
                         st.latex(fr"f({val_lim}) = {sp.latex(expr).replace('x', '('+val_lim+')')}")
                         
-                        if str(res) == "oo" or str(res) == "-oo" or str(res) == "nan":
-                             st.warning("⚠️ Se detectó una indeterminación o asíntota. El programa aplicó reglas avanzadas (L'Hôpital).")
+                        # LÓGICA DE DETECCIÓN DE INDETERMINACIÓN
+                        if sustitucion.has(sp.nan) or sustitucion.has(sp.zoo) or (target != sp.oo and "0/0" in str(sustitucion)):
+                            st.error("⚠️ **¡ALERTA!** Al sustituir obtenemos una **INDETERMINACIÓN (0/0 o ∞/∞)**.")
+                            st.markdown("""
+                            **¿Qué significa esto?**
+                            No podemos quedarnos con este resultado. Para hallar el valor verdadero (7.5) debemos eliminar la indeterminación usando uno de estos métodos:
+                            1.  **Factorización:** Simplificar $(x-5)$ arriba y abajo.
+                            2.  **Racionalización:** Si hubiera raíces.
+                            3.  **Regla de L'Hôpital:** Derivar arriba y abajo.
+                            """)
+                            st.success(f"Al aplicar estos métodos, llegamos al resultado: **{res_final}**")
+                        
+                        elif target == sp.oo:
+                             st.info("ℹ️ Es un límite al infinito. Se analizan los grados de los polinomios.")
+                        
                         else:
-                             st.success("✅ El límite es directo y determinado.")
-                except:
-                    col2.error("Valor inválido. Usa números o 'oo' para infinito.")
+                             st.success("✅ **Sustitución Directa:** La función es continua en este punto, el valor obtenido es la respuesta final.")
+
+                except Exception as e:
+                    col2.error(f"Error en el cálculo: {e}")
 
         # === TAB 2: DERIVADAS ===
         with tab2:
@@ -220,6 +244,7 @@ st.markdown("""
     by: David My
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
