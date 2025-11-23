@@ -261,9 +261,10 @@ else:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #888; font-style: italic;">
-    by: David My
+    by: David My 👀
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
