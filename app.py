@@ -140,17 +140,6 @@ if func_input:
                              st.success("✅ El límite es directo y determinado.")
                 except:
                     col2.error("Valor inválido. Usa números o 'oo' para infinito.")
-                    
-                    # Explicación paso a paso
-                    with st.expander("📝 Ver Explicación del Procedimiento"):
-                        st.markdown(f"1. **Evaluar:** Sustituimos $x$ por ${val_lim}$ en la función.")
-                        st.latex(fr"f({val_lim}) = {sp.latex(expr).replace('x', '('+val_lim+')')}")
-                        if str(res) == "oo" or str(res) == "-oo" or str(res) == "nan":
-                             st.warning("⚠️ Se detectó una indeterminación o asíntota. El programa aplicó reglas avanzadas (L'Hôpital) para hallar el valor real.")
-                        else:
-                             st.success("✅ El límite es directo y determinado.")
-                except:
-                    col2.error("Valor inválido. Usa números o 'oo' para infinito.")
 
         # === TAB 2: DERIVADAS ===
         with tab2:
@@ -231,5 +220,6 @@ st.markdown("""
     by: David My
 </div>
 """, unsafe_allow_html=True)
+
 
 
