@@ -110,61 +110,99 @@ if func_input:
         # --- PESTAÑAS PRINCIPALES ---
         tab1, tab2, tab3, tab4 = st.tabs(["📏 Límites", "📉 Derivadas", "∫ Integrales", "📊 Gráfico Pro"])
         
-        # === TAB 1: LÍMITES (LÓGICA CORREGIDA 0/0) ===
+      # === TAB 1: LÍMITES (MODO DETECTIVE ALGEBRAICO) ===
         with tab1:
             col1, col2 = st.columns([1, 2])
-            val_lim = col1.text_input("x tiende a:", "0")
+            val_lim = col1.text_input("x tiende a:", "5") # Puse 5 por defecto para tu ejercicio
             
             if col1.button("Calcular Límite"):
                 try:
-                    # 1. Preparar el valor objetivo
-                    if val_lim == 'oo':
-                        target = sp.oo
-                    else:
-                        target = sp.sympify(val_lim)
+                    # Preparar valores
+                    if val_lim == 'oo': target = sp.oo
+                    else: target = sp.sympify(val_lim)
                     
-                    # 2. Calcular el Límite Real (El resultado final correcto)
+                    # 1. Calcular Resultado Final
                     res_final = sp.limit(expr, x, target)
                     
-                    # 3. Calcular la Sustitución Directa (Para ver si da error)
-                    try:
-                        sustitucion = expr.subs(x, target)
-                    except:
-                        sustitucion = sp.nan
-
+                    # 2. Evaluar Sustitución Directa
+                    try: sustitucion = expr.subs(x, target)
+                    except: sustitucion = sp.nan
+                    
                     # --- MOSTRAR RESULTADO ---
                     col2.markdown(f"### Resultado:")
-                    col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res_final)} \quad \approx \quad {res_final.evalf():.4f}")
-                    
-                    # --- EXPLICACIÓN INTELIGENTE ---
-                    with st.expander("📝 Ver Análisis del Procedimiento", expanded=True):
-                        st.markdown(f"**Paso 1: Intentar sustitución directa**")
-                        st.write(f"Evaluamos $f({val_lim})$:")
+                    col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res_final)}")
+                    if not res_final.is_infinite and not res_final.has(sp.nan):
+                        col2.write(f"Decimal: {res_final.evalf():.4f}")
+
+                    # --- ZONA DE PASO A PASO "HUMANO" ---
+                    with st.expander("📝 Ver Procedimiento Algebraico Paso a Paso", expanded=True):
                         
-                        # Mostramos la fórmula sustituida visualmente
+                        # PASO 1: EVALUACIÓN
+                        st.markdown("**Paso 1: Evaluar la indeterminación**")
+                        st.write(f"Reemplazamos $x = {val_lim}$:")
                         st.latex(fr"f({val_lim}) = {sp.latex(expr).replace('x', '('+val_lim+')')}")
                         
-                        # LÓGICA DE DETECCIÓN DE INDETERMINACIÓN
-                        if sustitucion.has(sp.nan) or sustitucion.has(sp.zoo) or (target != sp.oo and "0/0" in str(sustitucion)):
-                            st.error("⚠️ **¡ALERTA!** Al sustituir obtenemos una **INDETERMINACIÓN (0/0 o ∞/∞)**.")
-                            st.markdown("""
-                            **¿Qué significa esto?**
-                            No podemos quedarnos con este resultado. Para hallar el valor verdadero (7.5) debemos eliminar la indeterminación usando uno de estos métodos:
-                            1.  **Factorización:** Simplificar $(x-5)$ arriba y abajo.
-                            2.  **Racionalización:** Si hubiera raíces.
-                            3.  **Regla de L'Hôpital:** Derivar arriba y abajo.
-                            """)
-                            st.success(f"Al aplicar estos métodos, llegamos al resultado: **{res_final}**")
-                        
-                        elif target == sp.oo:
-                             st.info("ℹ️ Es un límite al infinito. Se analizan los grados de los polinomios.")
-                        
+                        if sustitucion.has(sp.nan) or (target != sp.oo and "0/0" in str(sustitucion)) or sustitucion == 0:
+                            st.error("⚠️ Obtenemos una forma indeterminada **0/0**.")
+                            
+                            # PASO 2: FACTORIZACIÓN (El Detective)
+                            st.markdown("---")
+                            st.markdown("**Paso 2: Identificar Fórmulas y Factorizar**")
+                            
+                            # Separamos Numerador y Denominador
+                            num, den = sp.fraction(expr)
+                            
+                            # --- DETECTIVE DE FÓRMULAS ---
+                            formulas_detectadas = []
+                            
+                            # Chequeo Numerador
+                            if sp.degree(num) == 3: formulas_detectadas.append("Diferencia/Suma de Cubos ($a^3 \pm b^3$) en el numerador.")
+                            if sp.degree(num) == 2: formulas_detectadas.append("Diferencia de Cuadrados ($a^2 - b^2$) o Trinomio en el numerador.")
+                            
+                            # Chequeo Denominador
+                            if sp.degree(den) == 3: formulas_detectadas.append("Diferencia/Suma de Cubos ($a^3 \pm b^3$) en el denominador.")
+                            if sp.degree(den) == 2: formulas_detectadas.append("Diferencia de Cuadrados ($a^2 - b^2$) o Trinomio en el denominador.")
+                            
+                            if formulas_detectadas:
+                                st.info("💡 **Estrategia detectada:**")
+                                for f in formulas_detectadas:
+                                    st.write("- " + f)
+                            
+                            # Factorizamos por separado
+                            num_fact = sp.factor(num)
+                            den_fact = sp.factor(den)
+                            
+                            col_f1, col_f2 = st.columns(2)
+                            with col_f1:
+                                st.write("**Numerador factorizado:**")
+                                st.latex(sp.latex(num) + r" \rightarrow " + sp.latex(num_fact))
+                            with col_f2:
+                                st.write("**Denominador factorizado:**")
+                                st.latex(sp.latex(den) + r" \rightarrow " + sp.latex(den_fact))
+                            
+                            # PASO 3: SIMPLIFICACIÓN
+                            st.markdown("---")
+                            st.markdown("**Paso 3: Simplificar y Eliminar el término problema**")
+                            st.write("Reescribimos el límite con los términos factorizados:")
+                            
+                            fraccion_factorizada = sp.Mul(num_fact, 1/den_fact, evaluate=False)
+                            st.latex(fr"\lim_{{x \to {val_lim}}} {sp.latex(fraccion_factorizada)}")
+                            
+                            st.write("Cancelamos los términos iguales arriba y abajo:")
+                            simplified_expr = sp.simplify(expr)
+                            st.latex(fr"\lim_{{x \to {val_lim}}} {sp.latex(simplified_expr)}")
+                            
+                            # PASO 4: EVALUACIÓN FINAL
+                            st.markdown("---")
+                            st.markdown("**Paso 4: Evaluar nuevamente**")
+                            st.write(f"Ahora que eliminamos la indeterminación, sustituimos $x={val_lim}$:")
+                            st.latex(fr"Result = {sp.latex(simplified_expr).replace('x', '('+val_lim+')')} = {sp.latex(res_final)}")
+                            
                         else:
-                             st.success("✅ **Sustitución Directa:** La función es continua en este punto, el valor obtenido es la respuesta final.")
+                            st.success("✅ La sustitución fue directa. No se requiere factorización.")
 
                 except Exception as e:
-                    col2.error(f"Error en el cálculo: {e}")
-
+                    col2.error(f"Error en cálculo: {e}")
         # === TAB 2: DERIVADAS ===
         with tab2:
             orden = st.slider("Orden de la derivada", 1, 3, 1)
@@ -244,6 +282,7 @@ st.markdown("""
     by: David My
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
