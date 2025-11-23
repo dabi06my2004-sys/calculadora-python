@@ -110,99 +110,81 @@ if func_input:
         # --- PESTAÑAS PRINCIPALES ---
         tab1, tab2, tab3, tab4 = st.tabs(["📏 Límites", "📉 Derivadas", "∫ Integrales", "📊 Gráfico Pro"])
         
-      # === TAB 1: LÍMITES (MODO DETECTIVE ALGEBRAICO) ===
+      # === TAB 1: LÍMITES (VISUALIZACIÓN CORREGIDA) ===
         with tab1:
             col1, col2 = st.columns([1, 2])
-            val_lim = col1.text_input("x tiende a:", "5") # Puse 5 por defecto para tu ejercicio
+            val_lim = col1.text_input("x tiende a:", "5")
             
             if col1.button("Calcular Límite"):
                 try:
-                    # Preparar valores
                     if val_lim == 'oo': target = sp.oo
                     else: target = sp.sympify(val_lim)
                     
-                    # 1. Calcular Resultado Final
                     res_final = sp.limit(expr, x, target)
-                    
-                    # 2. Evaluar Sustitución Directa
                     try: sustitucion = expr.subs(x, target)
                     except: sustitucion = sp.nan
                     
-                    # --- MOSTRAR RESULTADO ---
+                    # Resultado Principal
                     col2.markdown(f"### Resultado:")
                     col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res_final)}")
                     if not res_final.is_infinite and not res_final.has(sp.nan):
                         col2.write(f"Decimal: {res_final.evalf():.4f}")
 
-                    # --- ZONA DE PASO A PASO "HUMANO" ---
+                    # --- PASO A PASO ---
                     with st.expander("📝 Ver Procedimiento Algebraico Paso a Paso", expanded=True):
                         
-                        # PASO 1: EVALUACIÓN
+                        # PASO 1
                         st.markdown("**Paso 1: Evaluar la indeterminación**")
-                        st.write(f"Reemplazamos $x = {val_lim}$:")
                         st.latex(fr"f({val_lim}) = {sp.latex(expr).replace('x', '('+val_lim+')')}")
                         
                         if sustitucion.has(sp.nan) or (target != sp.oo and "0/0" in str(sustitucion)) or sustitucion == 0:
                             st.error("⚠️ Obtenemos una forma indeterminada **0/0**.")
                             
-                            # PASO 2: FACTORIZACIÓN (El Detective)
+                            # PASO 2: FACTORIZACIÓN
                             st.markdown("---")
-                            st.markdown("**Paso 2: Identificar Fórmulas y Factorizar**")
+                            st.markdown("**Paso 2: Factorizar Numerador y Denominador**")
                             
-                            # Separamos Numerador y Denominador
                             num, den = sp.fraction(expr)
-                            
-                            # --- DETECTIVE DE FÓRMULAS ---
-                            formulas_detectadas = []
-                            
-                            # Chequeo Numerador
-                            if sp.degree(num) == 3: formulas_detectadas.append("Diferencia/Suma de Cubos ($a^3 \pm b^3$) en el numerador.")
-                            if sp.degree(num) == 2: formulas_detectadas.append("Diferencia de Cuadrados ($a^2 - b^2$) o Trinomio en el numerador.")
-                            
-                            # Chequeo Denominador
-                            if sp.degree(den) == 3: formulas_detectadas.append("Diferencia/Suma de Cubos ($a^3 \pm b^3$) en el denominador.")
-                            if sp.degree(den) == 2: formulas_detectadas.append("Diferencia de Cuadrados ($a^2 - b^2$) o Trinomio en el denominador.")
-                            
-                            if formulas_detectadas:
-                                st.info("💡 **Estrategia detectada:**")
-                                for f in formulas_detectadas:
-                                    st.write("- " + f)
-                            
-                            # Factorizamos por separado
                             num_fact = sp.factor(num)
                             den_fact = sp.factor(den)
+
+                            # Mostramos la factorización individual
+                            c_f1, c_f2 = st.columns(2)
+                            with c_f1: 
+                                st.caption("Numerador:")
+                                st.latex(fr"{sp.latex(num)} \rightarrow {sp.latex(num_fact)}")
+                            with c_f2: 
+                                st.caption("Denominador:")
+                                st.latex(fr"{sp.latex(den)} \rightarrow {sp.latex(den_fact)}")
                             
-                            col_f1, col_f2 = st.columns(2)
-                            with col_f1:
-                                st.write("**Numerador factorizado:**")
-                                st.latex(sp.latex(num) + r" \rightarrow " + sp.latex(num_fact))
-                            with col_f2:
-                                st.write("**Denominador factorizado:**")
-                                st.latex(sp.latex(den) + r" \rightarrow " + sp.latex(den_fact))
-                            
-                            # PASO 3: SIMPLIFICACIÓN
+                            # PASO 3: REESCRIBIR (AQUÍ ESTABA EL ERROR DEL "1")
                             st.markdown("---")
-                            st.markdown("**Paso 3: Simplificar y Eliminar el término problema**")
-                            st.write("Reescribimos el límite con los términos factorizados:")
+                            st.markdown("**Paso 3: Reescribir el límite factorizado**")
+                            st.write("Juntamos las partes factorizadas en una sola fracción:")
                             
-                            fraccion_factorizada = sp.Mul(num_fact, 1/den_fact, evaluate=False)
-                            st.latex(fr"\lim_{{x \to {val_lim}}} {sp.latex(fraccion_factorizada)}")
+                            # CORRECCIÓN: Construimos la fracción LaTeX manualmente para que quede perfecta
+                            fraccion_visual = fr"\frac{{{sp.latex(num_fact)}}}{{{sp.latex(den_fact)}}}"
+                            st.latex(fr"\lim_{{x \to {val_lim}}} {fraccion_visual}")
                             
-                            st.write("Cancelamos los términos iguales arriba y abajo:")
-                            simplified_expr = sp.simplify(expr)
-                            st.latex(fr"\lim_{{x \to {val_lim}}} {sp.latex(simplified_expr)}")
+                            # PASO 4: SIMPLIFICAR (AQUÍ ESTABA EL OTRO ERROR)
+                            st.markdown("**Paso 4: Cancelar términos semejantes**")
+                            st.write("Eliminamos el término que causa el cero (el paréntesis repetido arriba y abajo):")
                             
-                            # PASO 4: EVALUACIÓN FINAL
+                            # CORRECCIÓN: Usamos 'cancel' para forzar la simplificación visual
+                            expr_simplificada = sp.cancel(expr)
+                            st.latex(fr"\lim_{{x \to {val_lim}}} {sp.latex(expr_simplificada)}")
+                            
+                            # PASO 5: EVALUAR
                             st.markdown("---")
-                            st.markdown("**Paso 4: Evaluar nuevamente**")
-                            st.write(f"Ahora que eliminamos la indeterminación, sustituimos $x={val_lim}$:")
-                            st.latex(fr"Result = {sp.latex(simplified_expr).replace('x', '('+val_lim+')')} = {sp.latex(res_final)}")
+                            st.markdown("**Paso 5: Evaluación Final**")
+                            st.write(f"Sustituimos $x={val_lim}$ en la función simplificada:")
+                            st.latex(fr"= {sp.latex(expr_simplificada).replace('x', '('+val_lim+')')} = {sp.latex(res_final)}")
                             
                         else:
-                            st.success("✅ La sustitución fue directa. No se requiere factorización.")
+                            st.success("✅ La sustitución fue directa.")
 
                 except Exception as e:
-                    col2.error(f"Error en cálculo: {e}")
+                    col2.error(f"Error: {e}")
         # === TAB 2: DERIVADAS ===
         with tab2:
             orden = st.slider("Orden de la derivada", 1, 3, 1)
@@ -282,6 +264,7 @@ st.markdown("""
     by: David My
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
