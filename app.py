@@ -7,6 +7,14 @@ from sympy.parsing.sympy_parser import parse_expr, standard_transformations, imp
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Matemática: Cálculo Diferencial", page_icon="📐", layout="wide")
 
+# --- OCULTAR ELEMENTOS PARA QUE NO COPIEN ---
+st.markdown("""
+<style>
+    #MainMenu {visibility: hidden;} /* Oculta el menú de hamburguesa */
+    footer {visibility: hidden;}    /* Oculta el pie de página "Made with Streamlit" */
+    header {visibility: hidden;}    /* Oculta la barra de colores superior */
+</style>
+""", unsafe_allow_html=True)
 # --- 2. ESTILOS VISUALES (CSS) ---
 st.markdown("""
 <style>
@@ -205,3 +213,4 @@ st.markdown("""
     by: David My
 </div>
 """, unsafe_allow_html=True)
+
