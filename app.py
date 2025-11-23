@@ -110,18 +110,36 @@ if func_input:
         # --- PESTAÑAS PRINCIPALES ---
         tab1, tab2, tab3, tab4 = st.tabs(["📏 Límites", "📉 Derivadas", "∫ Integrales", "📊 Gráfico Pro"])
         
-        # === TAB 1: LÍMITES ===
+        # === TAB 1: LÍMITES (MEJORADO: FRACCIONES + DECIMALES) ===
         with tab1:
             col1, col2 = st.columns([1, 2])
             val_lim = col1.text_input("x tiende a:", "0")
             
             if col1.button("Calcular Límite"):
                 try:
-                    target = sp.oo if val_lim == 'oo' else float(val_lim)
+                    # TRUCO: Usamos sp.sympify en vez de float para mantenerlo exacto (fracción)
+                    if val_lim == 'oo':
+                        target = sp.oo
+                    else:
+                        target = sp.sympify(val_lim) # Esto convierte "4" en numero exacto, no decimal
+                    
                     res = sp.limit(expr, x, target)
                     
                     col2.markdown(f"### Resultado:")
-                    col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res)}")
+                    # Mostramos: Limite = Fracción = Decimal
+                    col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res)} \quad \approx \quad {res.evalf():.4f}")
+                    
+                    # Explicación paso a paso
+                    with st.expander("📝 Ver Explicación del Procedimiento"):
+                        st.markdown(f"1. **Evaluar:** Sustituimos $x$ por ${val_lim}$ en la función.")
+                        st.latex(fr"f({val_lim}) = {sp.latex(expr).replace('x', '('+val_lim+')')}")
+                        
+                        if str(res) == "oo" or str(res) == "-oo" or str(res) == "nan":
+                             st.warning("⚠️ Se detectó una indeterminación o asíntota. El programa aplicó reglas avanzadas (L'Hôpital).")
+                        else:
+                             st.success("✅ El límite es directo y determinado.")
+                except:
+                    col2.error("Valor inválido. Usa números o 'oo' para infinito.")
                     
                     # Explicación paso a paso
                     with st.expander("📝 Ver Explicación del Procedimiento"):
@@ -213,4 +231,5 @@ st.markdown("""
     by: David My
 </div>
 """, unsafe_allow_html=True)
+
 
