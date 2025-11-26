@@ -111,63 +111,67 @@ if func_input:
         # --- PESTAÑAS PRINCIPALES ---
         tab1, tab2, tab3, tab4 = st.tabs(["📏 Límites", "📉 Derivadas", "∫ Integrales", "📊 Gráfico Pro"])
         
-      # === TAB 1: LÍMITES (ARREGLO FINAL DE FORMATO Y LÓGICA) ===
+      # === TAB 1: LÍMITES (LÓGICA FORZADA POR COEFICIENTES) ===
         with tab1:
             col1, col2 = st.columns([1, 2])
-            val_lim = col1.text_input("x tiende a:", "oo") 
+            val_lim = col1.text_input("x tiende a:", "oo")
             
             if col1.button("Calcular Límite"):
                 try:
+                    # 1. Preparar el valor objetivo
                     if val_lim == 'oo': target = sp.oo
                     else: target = sp.sympify(val_lim)
                     
+                    # 2. Calcular Resultado (Inicial)
                     res_final = sp.limit(expr, x, target)
+                    sustitucion = expr.subs(x, target)
                     
-                    # 1. PREPARAR EL VALOR PARA EL DISPLAY
-                    # Corregimos el símbolo de infinito a \infty en LaTeX
-                    latex_val_lim = r"\infty" if val_lim == 'oo' else val_lim
-                    
-                    # 2. PREPARAR EL RESULTADO DECIMAL (Evitamos el crash si es infinito)
-                    if res_final.is_infinite:
-                        decimal_approx = "" # No mostrar decimal
-                    else:
-                        decimal_approx = f"\\approx {res_final.evalf():.4f}" # Formato seguro
-                    
-                    # 3. MOSTRAR RESULTADO
+                    # --- MOSTRAR RESULTADO ---
                     col2.markdown(f"### Resultado:")
-                    # Ahora se ve: Limite = Fracción  ≈ Decimal
-                    col2.latex(fr"\lim_{{x \to {latex_val_lim}}} f(x) = {sp.latex(res_final)} \quad {decimal_approx}")
-                    
-                    # --- LÓGICA DE PROCEDIMIENTO (ANALISIS DE GRADOS PARA INFINITO) ---
-                    with st.expander("📝 Ver Procedimiento Algebraico Paso a Paso", expanded=True):
+
+                    # --- LÓGICA DE ANÁLISIS DE GRADOS (CORRECCIÓN) ---
+                    if target == sp.oo and expr.is_rational_function(x):
                         
-                        # Lógica para límite al infinito (Coeficientes)
-                        if target == sp.oo and expr.is_rational_function(x):
-                            num, den = sp.fraction(expr)
-                            n_deg = sp.degree(num, x)
-                            d_deg = sp.degree(den, x)
-                            
+                        num, den = sp.fraction(expr)
+                        n_poly = sp.Poly(num, x)
+                        d_poly = sp.Poly(den, x)
+                        n_deg = n_poly.degree() # Grado del numerador (Debe ser 2)
+                        d_deg = d_poly.degree() # Grado del denominador (Debe ser 2)
+                        
+                        # PASO A PASO
+                        with st.expander("📝 Ver Procedimiento Algebraico Paso a Paso", expanded=True):
                             st.markdown("**Paso 1: Análisis de Grados ($x \to \infty$)**")
+                            
                             if n_deg == d_deg:
-                                n_coef = sp.Poly(num, x).LC()
-                                d_coef = sp.Poly(den, x).LC()
-                                ratio = n_coef / d_coef
-                                st.success(f"Los grados son iguales ($n={n_deg}, d={d_deg}$).")
-                                st.latex(fr"\text{{Resultado}} = \frac{{\text{{Coef. N}}}}{{\text{{Coef. D}}}} = \frac{{{n_coef}}}{{{d_coef}}} = {sp.latex(ratio)}")
-                            elif n_deg > d_deg:
-                                st.warning("El grado del numerador es mayor. El límite tiende a $\infty$.")
-                            else:
-                                st.success("El grado del denominador es mayor. El límite tiende a $0$.")
+                                # Grados Iguales -> CORRECCIÓN: Usamos el ratio
+                                n_coef = n_poly.LC()
+                                d_coef = d_poly.LC()
+                                res_final = n_coef / d_coef # <- Esto fuerza res_final a ser 2
                                 
-                        elif target != sp.oo:
-                            # Lógica del 0/0 que funciona correctamente
-                            sustitucion = expr.subs(x, target)
-                            st.markdown("**Paso 1: Evaluar la indeterminación**")
+                                st.success(f"Los grados son **IGUALES** ($n={n_deg}, d={d_deg}$).")
+                                st.latex(fr"\text{{Resultado}} = \frac{{\text{{Coef. N}}}}{{\text{{Coef. D}}}} = \frac{{{n_coef}}}{{{d_coef}}} = {sp.latex(res_final)}")
+                                
+                            elif n_deg > d_deg:
+                                res_final = sp.oo
+                                st.warning(f"El grado del numerador es **MAYOR** ($n={n_deg}, d={d_deg}$). El límite tiende a $\infty$.")
+                                
+                            else: # n_deg < d_deg
+                                res_final = 0
+                                st.success(f"El grado del denominador es **MAYOR** ($n={n_deg}, d={d_deg}$). El límite tiende a $0$.")
+                                
+                        # Actualiza el display del resultado con el valor corregido
+                        col2.latex(fr"\lim_{{x \to \infty}} f(x) = {sp.latex(res_final)} \quad \approx \quad {res_final.evalf():.4f}")
+
+                    # --- SI NO ES INFINITO (Límites Normales) ---
+                    else:
+                        col2.latex(fr"\lim_{{x \to {val_lim}}} f(x) = {sp.latex(res_final)} \quad \approx \quad {res_final.evalf():.4f}")
+                        
+                        with st.expander("📝 Ver Procedimiento Algebraico Paso a Paso", expanded=True):
                             if sustitucion.has(sp.nan) or (target != sp.oo and "0/0" in str(sustitucion)):
                                 st.error("⚠️ **ALERTA!** Indeterminación (0/0) detectada.")
-                                # El resto del código de factorización (pasos 2, 3, 4) iría aquí, pero lo hemos simplificado para no repetir el código largo.
+                                # La lógica de factorización se mantendría aquí.
                             else:
-                                st.success("✅ **Sustitución Directa:** El valor obtenido es la respuesta final.")
+                                st.success("✅ **Sustitución Directa**.")
 
                 except Exception as e:
                     col2.error(f"Error en cálculo: {e}")
@@ -250,6 +254,7 @@ st.markdown("""
     by: David My 👀
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
